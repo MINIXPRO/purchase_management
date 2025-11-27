@@ -275,35 +275,6 @@ def get_columns(filters):
 				"width": 100,
 			},
 			{"label": _("Description"), "fieldname": "description", "width": 200},
-			{
-				"label": _("Incoming Rate"),
-				"fieldname": "incoming_rate",
-				"fieldtype": "Currency",
-				"width": 110,
-				"options": "Company:company:default_currency",
-				"convertible": "rate",
-			},
-			{
-				"label": _("Avg Rate (Balance Stock)"),
-				"fieldname": "valuation_rate",
-				"fieldtype": filters.valuation_field_type,
-				"width": 180,
-				"options": "Company:company:default_currency"
-				if filters.valuation_field_type == "Currency"
-				else None,
-				"convertible": "rate",
-			},
-			{
-				"label": _("Valuation Rate"),
-				"fieldname": "in_out_rate",
-				"fieldtype": filters.valuation_field_type,
-				"width": 140,
-				"options": "Company:company:default_currency"
-				if filters.valuation_field_type == "Currency"
-				else None,
-				"convertible": "rate",
-			},
-			
 			{"label": _("Voucher Type"), "fieldname": "voucher_type", "width": 110},
 			{
 				"label": _("Voucher #"),
@@ -354,7 +325,6 @@ def get_columns(filters):
 
 
 def get_stock_ledger_entries(filters, items):
-	from_date = get_datetime(filters.from_date + " 00:00:00")
 	to_date = get_datetime(filters.to_date + " 23:59:59")
 
 	sle = frappe.qb.DocType("Stock Ledger Entry")
@@ -380,7 +350,7 @@ def get_stock_ledger_entries(filters, items):
 			sle.serial_no,
 			sle.project,
 		)
-		.where((sle.docstatus < 2) & (sle.is_cancelled == 0) & (sle.posting_datetime[from_date:to_date]))
+		.where((sle.docstatus < 2) & (sle.is_cancelled == 0) & (sle.posting_datetime <= to_date))
 		.orderby(sle.posting_datetime)
 		.orderby(sle.creation)
 	)
