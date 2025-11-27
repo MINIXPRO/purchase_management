@@ -110,7 +110,8 @@ def execute(filters=None):
 	else:
 		final_data = []
 	
-	final_data.extend(list(balance_tracker.values()))
+	# final_data.extend(list(balance_tracker.values()))
+	final_data.extend([row for row in balance_tracker.values() if row.get("qty_after_transaction", 0) != 0])
 	
 	update_included_uom_in_report(columns, final_data, include_uom, conversion_factors)
 	return columns, final_data
