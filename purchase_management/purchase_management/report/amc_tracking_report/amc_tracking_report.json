@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2025-12-29 12:01:26.933800",
+ "modified": "2025-12-30 16:33:55.548463",
  "modified_by": "Administrator",
  "module": "Purchase Management",
  "name": "AMC Tracking Report",
@@ -22,6 +22,12 @@
  "roles": [
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Maintenance User"
+  },
+  {
+   "role": "Maintenance Manager"
   }
  ],
  "timeout": 0
