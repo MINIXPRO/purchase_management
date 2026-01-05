@@ -104,7 +104,7 @@ def execute(filters=None):
 			conversion_factors.append(item_detail.conversion_factor)
 
 	if opening_row:
-		final_data = [opening_row] 
+		final_data = [opening_row]  
 	else:
 		final_data = []
 	
@@ -356,16 +356,26 @@ def get_stock_ledger_entries(filters, items):
 	inventory_dimension_fields = get_inventory_dimension_fields()
 	if inventory_dimension_fields:
 		for fieldname in inventory_dimension_fields:
-			query = query.select(fieldname)
+			query = query.select(sle[fieldname])
 			if fieldname in filters and filters.get(fieldname):
-				query = query.where(sle[fieldname].isin(filters.get(fieldname)))
+				# FIX: Use getattr to access the field from sle DocType object
+				field_obj = getattr(sle, fieldname)
+				filter_value = filters.get(fieldname)
+				
+				# Handle both list and single value filters
+				if isinstance(filter_value, (list, tuple)):
+					query = query.where(field_obj.isin(filter_value))
+				else:
+					query = query.where(field_obj == filter_value)
 
 	if items:
 		query = query.where(sle.item_code.isin(items))
 
+	# Handle other fields that are NOT in inventory dimensions
 	for field in ["voucher_no", "project", "company", "employee_function"]:
 		if filters.get(field) and field not in inventory_dimension_fields:
-			query = query.where(sle[field] == filters.get(field))
+			field_obj = getattr(sle, field)
+			query = query.where(field_obj == filters.get(field))
 
 	if filters.get("batch_no"):
 		bundles = get_serial_and_batch_bundles(filters)
@@ -550,6 +560,7 @@ def get_opening_balance(filters, columns, sl_entries):
 		}
 	)
 
+	# check if any SLEs are actually Opening Stock Reconciliation
 	for sle in list(sl_entries):
 		if (
 			sle.get("voucher_type") == "Stock Reconciliation"
