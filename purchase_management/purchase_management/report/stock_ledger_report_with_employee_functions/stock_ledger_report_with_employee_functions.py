@@ -26,6 +26,7 @@ def execute(filters=None):
 	items = get_items(filters)
 	sl_entries = get_stock_ledger_entries(filters, items)
 	item_details = get_item_details(items, sl_entries, include_uom)
+	
 	if filters.get("batch_no"):
 		opening_row = get_opening_balance_from_batch(filters, columns, sl_entries)
 	else:
@@ -42,14 +43,10 @@ def execute(filters=None):
 	
 	balance_tracker = {}
 	
-	if opening_row:
-		data.append(opening_row)
-		conversion_factors.append(0)
-
 	actual_qty = stock_value = 0
 	if opening_row:
-		actual_qty = opening_row.get("qty_after_transaction")
-		stock_value = opening_row.get("stock_value")
+		actual_qty = opening_row.get("qty_after_transaction", 0)
+		stock_value = opening_row.get("stock_value", 0)
 
 	available_serial_nos = {}
 	inventory_dimension_filters_applied = check_inventory_dimension_filters_applied(filters)
@@ -103,12 +100,15 @@ def execute(filters=None):
 		if include_uom:
 			conversion_factors.append(item_detail.conversion_factor)
 
-	if opening_row:
-		final_data = [opening_row]  
-	else:
-		final_data = []
+	final_data = []
 	
-	final_data.extend([row for row in balance_tracker.values() if row.get("qty_after_transaction", 0) != 0])
+	if opening_row and opening_row.get("qty_after_transaction", 0) != 0:
+		final_data.append(opening_row)
+		conversion_factors.insert(0, 0)
+	
+	for row in balance_tracker.values():
+		if row.get("qty_after_transaction", 0) != 0:
+			final_data.append(row)
 	
 	update_included_uom_in_report(columns, final_data, include_uom, conversion_factors)
 	return columns, final_data
@@ -358,11 +358,9 @@ def get_stock_ledger_entries(filters, items):
 		for fieldname in inventory_dimension_fields:
 			query = query.select(sle[fieldname])
 			if fieldname in filters and filters.get(fieldname):
-				# FIX: Use getattr to access the field from sle DocType object
 				field_obj = getattr(sle, fieldname)
 				filter_value = filters.get(fieldname)
 				
-				# Handle both list and single value filters
 				if isinstance(filter_value, (list, tuple)):
 					query = query.where(field_obj.isin(filter_value))
 				else:
@@ -371,8 +369,7 @@ def get_stock_ledger_entries(filters, items):
 	if items:
 		query = query.where(sle.item_code.isin(items))
 
-	# Handle other fields that are NOT in inventory dimensions
-	for field in ["voucher_no", "project", "company", "employee_function"]:
+	for field in ["voucher_no", "project", "company"]:
 		if filters.get(field) and field not in inventory_dimension_fields:
 			field_obj = getattr(sle, field)
 			query = query.where(field_obj == filters.get(field))
@@ -560,7 +557,6 @@ def get_opening_balance(filters, columns, sl_entries):
 		}
 	)
 
-	# check if any SLEs are actually Opening Stock Reconciliation
 	for sle in list(sl_entries):
 		if (
 			sle.get("voucher_type") == "Stock Reconciliation"
