@@ -354,6 +354,12 @@ def get_columns(filters):
 				"width": 100,
 			},
 			{
+				"label": _("Shipper No"),
+				"fieldname": "custom_shipper_no",
+				"fieldtype": "Data",
+				"width": 100,
+			},
+			{
 				"label": _("Supplier Batch No"),
 				"fieldname": "custom_supplier_batch_no",
 				"fieldtype": "Data",
@@ -440,6 +446,7 @@ def get_stock_ledger_entries(filters, items):
 		)
 		.select(
 			pri.custom_area,
+			pri.custom_shipper_no,
 			pri.custom_supplier_batch_no,     
 			pri.custom_supplier_expiry_,
 			pri.custom_supplier_expiry_date,      
