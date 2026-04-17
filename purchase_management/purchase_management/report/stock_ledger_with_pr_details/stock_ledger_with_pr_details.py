@@ -212,6 +212,12 @@ def get_columns(filters):
 		},
 		{"label": _("Item Name"), "fieldname": "item_name", "width": 100},
 		{
+			"label": _("Cat No"),
+			"fieldname": "custom_cat_no",
+			"fieldtype": "Data",
+			"width": 100,
+		},
+		{
 			"label": _("Stock UOM"),
 			"fieldname": "stock_uom",
 			"fieldtype": "Link",
@@ -446,6 +452,7 @@ def get_stock_ledger_entries(filters, items):
 		)
 		.select(
 			pri.custom_area,
+			pri.custom_cat_no,
 			pri.custom_shipper_no,
 			pri.custom_supplier_batch_no,     
 			pri.custom_supplier_expiry_,
