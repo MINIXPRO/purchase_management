@@ -405,6 +405,13 @@ def get_stock_ledger_entries(filters, items):
 
 	query = apply_warehouse_filter(query, sle, filters)
 
+	wh = frappe.qb.DocType("Warehouse")
+	query = (
+		query.join(wh)
+		.on(sle.warehouse == wh.name)
+		.where((wh.custom_lab_warehouse == 1) | (wh.custom_store_warehouse == 1))
+	)
+
 	return query.run(as_dict=True)
 
 

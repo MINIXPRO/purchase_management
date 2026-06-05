@@ -32,9 +32,22 @@ frappe.query_reports["Employee Function–Wise Stock Ledger with Values"] = {
 			options: "Warehouse",
 			get_data: function (txt) {
 				const company = frappe.query_report.get_filter_value("company");
-
-				return frappe.db.get_link_options("Warehouse", txt, {
-					company: company,
+				return frappe.db.get_list("Warehouse", {
+					filters: {
+						company: company,
+					},
+					or_filters: [
+						["custom_lab_warehouse", "=", 1],
+						["custom_store_warehouse", "=", 1],
+					],
+					fields: ["name", "warehouse_name"],
+				}).then(function(results) {
+					return results.map(function(d) {
+						return {
+							value: d.name,
+							description: d.warehouse_name || "",
+						};
+					});
 				});
 			},
 		},
