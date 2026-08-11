@@ -10,7 +10,7 @@ import json
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
-    
+
     # Pagination
     page_length = 50
     start = filters.get("start", 0) or 0
@@ -26,7 +26,7 @@ def execute(filters=None):
             "indicator": "blue",
             "label": f"Showing records {start + 1}–{min(start + page_length, total_records)} of {total_records}"
         })
-    
+
     return columns, paginated_data, None, None, report_summary
 
 
@@ -57,7 +57,7 @@ def get_columns():
         {"fieldname": "po_to_grn_time", "label": _("PO → GRN"), "fieldtype": "Data", "width": 120},
         {"fieldname": "grn_to_pi_time", "label": _("GRN → PI"), "fieldtype": "Data", "width": 120},
         {"fieldname": "total_lead_time", "label": _("Total Lead Time"), "fieldtype": "Data", "width": 150},
-
+        {"fieldname": "lead_time_days", "label": _("Lead Time From Item"), "fieldtype": "Data", "width": 150},
         {"fieldname": "rate", "label": _("Rate / Unit"), "fieldtype": "Currency", "width": 100},
         {"fieldname": "po_value", "label": _("PO Value (₹)"), "fieldtype": "Currency", "width": 120},
         {"fieldname": "invoice_amount", "label": _("Invoice Amount (₹)"), "fieldtype": "Currency", "width": 120},
@@ -156,21 +156,23 @@ def get_pi_workflow_times(pi_no):
 
 def get_data(filters):
     conditions = get_conditions(filters)
-
     mr_query = f"""
         SELECT
             mri.parent AS mr_no,
             mr.creation AS mr_creation,
             mr.schedule_date AS schedule_date,
             mri.item_code, mri.item_name, mri.qty AS required_qty,
-            mr.status AS mr_status
+            mr.status AS mr_status,
+            item.lead_time_days AS lead_time_days
         FROM `tabMaterial Request Item` mri
         INNER JOIN `tabMaterial Request` mr ON mri.parent = mr.name
+        LEFT JOIN `tabItem` item ON item.name = mri.item_code
         WHERE mr.docstatus = 1 {conditions}
         ORDER BY mr.creation DESC, mr.name, mri.idx
     """
+
     mr_data = frappe.db.sql(mr_query, filters, as_dict=1)
-    
+
     data, sno, prev_mr_no = [], 1, None
     for mr_item in mr_data:
         mr_no = mr_item.mr_no
@@ -229,6 +231,7 @@ def get_data(filters):
                     "po_to_grn_time": format_time_difference(po_to_grn_seconds),
                     "grn_to_pi_time": format_time_difference(grn_to_pi_seconds),
                     "total_lead_time": format_time_difference(total_seconds),
+                    "lead_time_days": mr_item.lead_time_days,
                     "rate": po.rate,
                     "po_value": po.amount,
                     "invoice_amount": pi.get("invoice_amount", 0),
@@ -246,6 +249,7 @@ def get_data(filters):
                 "item_code": mr_item.item_code,
                 "item_name": mr_item.item_name,
                 "required_qty": mr_item.required_qty,
+                "lead_time_days": mr_item.lead_time_days,
                 "mr_status": mr_item.mr_status,
                 "po_status": "Not Created"
             })
