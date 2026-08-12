@@ -156,6 +156,10 @@ def get_pi_workflow_times(pi_no):
 
 def get_data(filters):
     conditions = get_conditions(filters)
+
+    # Excluded item creation types - Capex/Asset items should never show in this report
+    excluded_creation_types = ("R&D-Capex/Asset", "Capex/Asset")
+
     mr_query = f"""
         SELECT
             mri.parent AS mr_no,
@@ -167,11 +171,17 @@ def get_data(filters):
         FROM `tabMaterial Request Item` mri
         INNER JOIN `tabMaterial Request` mr ON mri.parent = mr.name
         LEFT JOIN `tabItem` item ON item.name = mri.item_code
-        WHERE mr.docstatus = 1 {conditions}
+        WHERE mr.docstatus = 1
+            AND mr.material_request_type = 'Purchase'
+            AND (item.custom_item_creation_type IS NULL OR item.custom_item_creation_type NOT IN %(excluded_creation_types)s)
+            {conditions}
         ORDER BY mr.creation DESC, mr.name, mri.idx
     """
 
-    mr_data = frappe.db.sql(mr_query, filters, as_dict=1)
+    sql_params = dict(filters)
+    sql_params["excluded_creation_types"] = excluded_creation_types
+
+    mr_data = frappe.db.sql(mr_query, sql_params, as_dict=1)
 
     data, sno, prev_mr_no = [], 1, None
     for mr_item in mr_data:
